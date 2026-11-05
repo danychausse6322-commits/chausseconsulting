@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama API quickstart — a documentation rewrite — Dany Chausse</title>
+<meta name="description" content="A quickstart rewrite for the Ollama API: install through first successful call, with the reasoning-model and streaming failures the reference docs do not cover.">
+<meta name="theme-color" content="#08090B">
+<meta name="author" content="Dany Chausse">
+<link rel="canonical" href="https://chausseconsulting.com/samples/ollama-quickstart/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230C0E11'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='36' fill='%23C9A46A'%3ED%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#08090B; --bg-1:#0C0E11; --bg-2:#11141A;
+    --copper:#C9A46A; --copper-soft:rgba(201,164,106,.12);
+    --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.06);
+    --text:#EDEAE4; --text-2:#A6ACB5; --text-3:#79808A;
+    --wrap:1180px; --pad:clamp(20px,5.5vw,44px); --sec:clamp(58px,8vw,112px);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif;
+    --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--wrap); margin:0 auto; padding:0 var(--pad)}
+  a{color:var(--copper); text-decoration:none; border-bottom:1px solid rgba(201,164,106,.35)}
+  a:hover{border-bottom-color:var(--copper)}
+  header.site{border-bottom:1px solid var(--line-2); padding:22px 0}
+  header.site .wrap{display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-size:20px; letter-spacing:.2px; color:var(--text); border:0}
+  header.site nav a{font-size:14px; color:var(--text-2); border:0; margin-left:22px}
+  header.site nav a:hover{color:var(--copper)}
+
+  main{padding:var(--sec) 0}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--copper); margin:0 0 18px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:400; margin:0 0 20px;
+    font-size:clamp(30px,4.2vw,46px); line-height:1.18; letter-spacing:-.01em;
+  }
+  .standfirst{color:var(--text-2); font-size:clamp(17px,1.7vw,19px); max-width:70ch; margin:0 0 26px}
+  .meta{
+    display:flex; flex-wrap:wrap; gap:10px 26px; padding:16px 0;
+    border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2);
+    font-family:var(--mono); font-size:12.5px; color:var(--text-3);
+  }
+  .meta b{color:var(--text-2); font-weight:500}
+
+  h2{
+    font-family:var(--serif); font-weight:400; font-size:clamp(22px,2.6vw,30px);
+    margin:calc(var(--sec) * .62) 0 14px; line-height:1.25;
+  }
+  h3{
+    font-family:var(--sans); font-weight:600; font-size:17px;
+    margin:34px 0 10px; color:var(--text);
+  }
+  p{max-width:74ch}
+  ul,ol{max-width:74ch; padding-left:22px}
+  li{margin:7px 0}
+  li::marker{color:var(--text-3)}
+  strong{color:var(--text); font-weight:600}
+  code{
+    font-family:var(--mono); font-size:.88em;
+    background:var(--bg-2); border:1px solid var(--line-2);
+    padding:1px 6px; border-radius:4px; color:#E6D9C0;
+  }
+  pre{
+    background:var(--bg-1); border:1px solid var(--line);
+    border-left:2px solid var(--copper);
+    border-radius:6px; padding:18px 18px; overflow-x:auto;
+    max-width:100%; margin:18px 0;
+  }
+  pre code{background:none; border:0; padding:0; font-size:13.2px; line-height:1.6; color:#D8DDE4}
+
+  blockquote{
+    margin:22px 0; padding:16px 20px; border-left:2px solid var(--copper);
+    background:var(--copper-soft); color:var(--text-2); max-width:74ch;
+  }
+  blockquote p{margin:0}
+
+  table{
+    width:100%; border-collapse:collapse; margin:20px 0; font-size:15px;
+    display:block; overflow-x:auto; white-space:normal;
+  }
+  th,td{border-bottom:1px solid var(--line-2); padding:10px 14px 10px 0; text-align:left; vertical-align:top}
+  th{font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); font-weight:500; border-bottom-color:var(--line)}
+
+  .defects{border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:26px 0}
+  .defect{display:grid; grid-template-columns:34px 1fr; gap:0; border-bottom:1px solid var(--line-2)}
+  .defect:last-child{border-bottom:0}
+  .defect .n{
+    font-family:var(--mono); font-size:12px; color:var(--copper);
+    padding:16px 0 16px 16px; opacity:.85;
+  }
+  .defect .b{padding:16px 18px 16px 4px}
+  .defect .t{font-weight:600; margin:0 0 4px}
+  .defect .d{color:var(--text-2); font-size:15px; margin:0}
+
+  .check{list-style:none; padding-left:0}
+  .check li{padding-left:26px; position:relative}
+  .check li::before{content:"\2713"; position:absolute; left:0; color:var(--copper)}
+
+  footer.site{
+    border-top:1px solid var(--line-2); padding:34px 0 60px;
+    color:var(--text-3); font-size:14px;
+  }
+  footer.site .wrap{display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  @media (max-width:640px){
+    body{font-size:16px}
+    header.site nav a{margin-left:0; margin-right:18px}
+    pre{font-size:12px}
+    .defect{grid-template-columns:26px 1fr}
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/">Chausse Consulting</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/samples/">Samples</a>
+      <a href="/#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <p class="eyebrow">Sample · Documentation rewrite</p>
+  <h1>Ollama API — a quickstart that actually reaches a working call</h1>
+  <p class="standfirst">
+    The official <code>docs/api.md</code> is a complete reference and not a
+    quickstart. This rewrite takes a developer from a fresh install to a
+    verified first call in five minutes, and covers the two failure modes the
+    reference does not mention at all.
+  </p>
+
+  <div class="meta">
+    <span><b>Project</b> Ollama</span>
+    <span><b>Tested against</b> 0.40.13</span>
+    <span><b>Platform</b> Windows 11</span>
+    <span><b>Date</b> 2026-11-04</span>
+  </div>
+
+  <h2>What was wrong with the existing docs</h2>
+
+  <p>
+    Five defects. Every one was verified by making the call myself, not by
+    reading the page and forming an opinion.
+  </p>
+
+  <div class="defects">
+    <div class="defect"><div class="n">01</div><div class="b">
+      <p class="t">No install or server-start step</p>
+      <p class="d"><code>ollama serve</code> appears nowhere in the API doc. A reader whose server is not running gets <code>connection refused</code> and no guidance.</p>
+    </div></div>
+    <div class="defect"><div class="n">02</div><div class="b">
+      <p class="t">Silent about authentication</p>
+      <p class="d">Every example omits an auth header. The docs never state that auth does not exist, so readers go looking for an API key that was never issued.</p>
+    </div></div>
+    <div class="defect"><div class="n">03</div><div class="b">
+      <p class="t">Examples assume a model you do not have</p>
+      <p class="d">All examples use <code>llama3.2</code>. First call on a fresh install returns <code>HTTP 404 {"error":"model 'llama3.2' not found"}</code> — reproduced.</p>
+    </div></div>
+    <div class="defect"><div class="n">04</div><div class="b">
+      <p class="t"><code>thinking</code> is in every response and documented nowhere</p>
+      <p class="d">Reasoning models return a <code>thinking</code> string absent from every documented response schema. A reader printing <code>response</code> gets an empty string and concludes the API is broken.</p>
+    </div></div>
+    <div class="defect"><div class="n">05</div><div class="b">
+      <p class="t">The streaming wire format is never shown</p>
+      <p class="d">Docs say responses “stream as JSON objects” but never show that the body is <strong>newline-delimited JSON</strong> — not an array, not SSE. <code>json.loads()</code> on the full body raises.</p>
+    </div></div>
+  </div>
+
+  <h2>The rewrite</h2>
+
+  <h3>1 — Install, and confirm the server is running</h3>
+
+  <pre><code>ollama --version
+ollama serve
+
+curl http://localhost:11434/api/version
+# {"version":"0.40.13"}</code></pre>
+
+  <p>
+    If that returns nothing, the server is down and nothing below will work.
+    One check eliminates roughly half of all “the API doesn't work” reports.
+  </p>
+
+  <h3>2 — There is no authentication</h3>
+
+  <p>
+    Ollama binds to <code>127.0.0.1:11434</code> with no key, no bearer token,
+    no auth header. The examples omit one because there isn't one.
+  </p>
+
+  <blockquote>
+    <p>
+      The consequence worth stating: anything on your machine can call your
+      models. Setting <code>OLLAMA_HOST=0.0.0.0</code> publishes an
+      unauthenticated API to your network.
+    </p>
+  </blockquote>
+
+  <h3>3 — Pull the model you will actually call</h3>
+
+  <pre><code>ollama pull qwen3.5:4b
+curl http://localhost:11434/api/tags</code></pre>
+
+  <p>
+    Use the exact <code>models[].name</code> value from that response. A name
+    not in the list is the single most common first-call failure.
+  </p>
+
+  <h3>4 — First call</h3>
+
+  <pre><code>curl http://localhost:11434/api/generate -d '{
+  "model": "qwen3.5:4b",
+  "prompt": "Reply with exactly: OK",
+  "stream": false
+}'</code></pre>
+
+  <p>Real response, trimmed:</p>
+
+  <pre><code>{
+  "model": "qwen3.5:4b",
+  "response": "OK",
+  "thinking": "Thinking Process:\n\n1. ...",
+  "done": true,
+  "done_reason": "stop",
+  "eval_count": 206,
+  "eval_duration": 39693751000
+}</code></pre>
+
+  <h3>5 — The reasoning-model trap</h3>
+
+  <p>
+    Empty <code>response</code>, populated <code>thinking</code>, and
+    <code>done_reason: "length"</code> means the model spent its whole token
+    budget reasoning. It is not broken — raise <code>num_predict</code>, or
+    pass <code>"think": false</code>.
+  </p>
+
+  <pre><code>{"response": "", "thinking": "Thinking Process:\n\n1.  **",
+ "done_reason": "length"}</code></pre>
+
+  <h3>6 — The streaming format</h3>
+
+  <p>
+    Streaming is on unless disabled, and the body is newline-delimited JSON.
+    Parse line by line; stop at the object where <code>done</code> is
+    <code>true</code>.
+  </p>
+
+  <pre><code>{"model":"qwen3.5:4b","response":"OK","thinking":"Thinking","done":false}
+{"model":"qwen3.5:4b","response":"","done":true,"done_reason":"stop"}</code></pre>
+
+  <h3>7 — A tested client, standard library only</h3>
+
+  <p>
+    The reference shows <code>curl</code> only. This is the equivalent in the
+    standard library, with both modes. The code below was extracted from this
+    page and executed before publishing.
+  </p>
+
+  <pre><code>import json
+import urllib.error
+import urllib.request
+
+BASE = "http://localhost:11434"
+
+
+def _post(path, payload, timeout=300):
+    req = urllib.request.Request(
+        BASE + path,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Ollama error {e.code}: {e.read().decode()}") from e
+
+
+def generate(prompt, model="qwen3.5:4b", num_predict=256):
+    """One call, one answer. Raises if the model only 'thought'."""
+    resp = _post("/api/generate", {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"num_predict": num_predict},
+    })
+    data = json.loads(resp.read())
+    if not data.get("response") and data.get("thinking"):
+        raise RuntimeError(
+            f"Model reasoned but produced no answer "
+            f"(done_reason={data.get('done_reason')}). Raise num_predict."
+        )
+    return data["response"]
+
+
+def generate_stream(prompt, model="qwen3.5:4b", num_predict=256):
+    """Yields text chunks. Responses are NEWLINE-DELIMITED JSON."""
+    resp = _post("/api/generate", {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,
+        "options": {"num_predict": num_predict},
+    })
+    for line in resp:
+        line = line.strip()
+        if not line:
+            continue
+        chunk = json.loads(line)
+        if chunk.get("done"):
+            break
+        if chunk.get("response"):
+            yield chunk["response"]</code></pre>
+
+  <p>
+    Two functions rather than one with a <code>stream</code> flag, because a
+    single function containing <code>yield</code> always returns a generator —
+    a bug I hit in my own first draft, which returned a generator even when
+    <code>stream=False</code>.
+  </p>
+
+  <h3>8 — Error reference the docs do not have</h3>
+
+  <table>
+    <thead><tr><th>You see</th><th>Means</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td><code>404 model 'x' not found</code></td><td>Name not in <code>/api/tags</code></td><td>Pull it, use the exact name</td></tr>
+      <tr><td>Connection refused on 11434</td><td>Server not running</td><td>Start app, or <code>ollama serve</code></td></tr>
+      <tr><td>Empty <code>response</code>, <code>done_reason: length</code></td><td>Budget spent thinking</td><td>Raise <code>num_predict</code></td></tr>
+      <tr><td><code>JSONDecodeError</code> on a stream</td><td>Parsed whole body as one doc</td><td>Parse line by line</td></tr>
+      <tr><td>Slow first call</td><td>Model loading (<code>load_duration</code>)</td><td>Normal once</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9 — Checkpoint</h3>
+
+  <ul class="check">
+    <li><code>/api/version</code> returns a version</li>
+    <li><code>/api/tags</code> lists your model</li>
+    <li>A <code>stream:false</code> call returns text in <code>response</code></li>
+    <li>You know there is no auth and the port must not be exposed</li>
+  </ul>
+
+  <h2>How this was written</h2>
+
+  <p>
+    I start from the running system, not the document. Every number on this
+    page — the 404 body, the <code>thinking</code> field, the chunk format, the
+    5.2 tokens/sec — came from calling a live server on the machine below.
+    Where I could not test something, I say so: all verification was on
+    Windows 11, and macOS and Linux were not tested.
+  </p>
+
+  <p>
+    If your documentation is written from an outline rather than from a running
+    install, the failure modes above are what your readers are hitting and
+    reporting as bugs.
+  </p>
+
+  <p style="margin-top:34px">
+    <a href="/#contact">Tell me what is breaking</a>
+  </p>
+
+</div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>Dany Chausse — AI automation &amp; technical writing</span>
+    <span>Sample written 2026-11-04 · Ollama 0.40.13 · Windows 11</span>
+  </div>
+</footer>
+
+</body>
+</html>
